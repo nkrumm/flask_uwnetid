@@ -22,7 +22,8 @@ UW_METADATA_ENDPOINT = 'https://idp.u.washington.edu/metadata/idp-metadata.xml'
 
 class UWAuthManager(object):
 
-    def __init__(self, app=None, domain=None, metadata_url=None, settings=None, secret_key=None):
+    def __init__(self, app=None, domain=None, metadata_url=None, 
+                 x509cert=None, private_key=None, settings=None, secret_key=None):
         # Set the domain name, used in the SP's settings and passed to the IDP
         # The domain name should match the Entitiy ID stored with the IDP.
         if not domain:
@@ -31,6 +32,15 @@ class UWAuthManager(object):
             if not domain.startswith("https://"):
                 raise Exception("Domain must be a fully-qualified domain name, starting with 'https://'")
             self.domain = domain
+
+        # set up the certificate
+        if not x509cert or not private_key:
+            raise Exception("A X509 certificate and private key is required.")
+            if "PRIVATE" in x509cert:
+                raise Exception("Certificate should NOT be the private key.")
+            else:
+                self.x509cert = x509cert
+                self.private_key = private_key
 
         # Set a default login callback, can be overriden
         self.login_callback = self._login_callback
@@ -89,6 +99,8 @@ class UWAuthManager(object):
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTPS-POST",
                     "url": "%s/saml/acs" % self.domain
                 },
+                "x509cert": self.x509cert,
+                "privateKey": self.private_key,
                 "entityId": "%s/saml/metadata" % self.domain,
                 "singleLogoutService": {
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
