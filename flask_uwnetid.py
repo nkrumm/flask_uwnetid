@@ -106,60 +106,6 @@ class UWAuthManager(object):
     def _settings_from_dict(self, dictionary):
         raise NotImplementedError
 
-    def _settings(self):
-        return {
-            "sp": {
-                "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
-                "assertionConsumerService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTPS-POST",
-                    "url": "%s/saml/acs" % self.domain
-                },
-                "entityId": "%s/saml/metadata" % self.domain,
-                "singleLogoutService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                    "url": "%s/saml/sls" % self.domain
-                }
-            }, 
-            "idp": {
-                "entityId": "urn:mace:incommon:washington.edu",
-                "singleSignOnService": {
-                    "url": "https://idp.u.washington.edu/idp/profile/SAML2/Redirect/SSO",
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-                },
-                "x509cert": self.x509cert,
-                "attributeConsumingService": {
-                    "serviceName": "SP test",
-                    "serviceDescription": "SP test serviceDescription"
-                }
-            }
-        }
-    def _ssocircle_settings(self):
-        return {
-            "sp": {
-                "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
-                "assertionConsumerService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTPS-POST",
-                    "url": "%s/saml/acs" % self.domain
-                },
-                "entityId": "%s/saml/metadata" % self.domain,
-                "singleLogoutService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                    "url": "%s/saml/sls" % self.domain
-                }
-            },
-            "idp": {
-                "entityId": "https://idp.ssocircle.com",
-                "singleLogoutService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                    "url": "https://idp.ssocircle.com:443/sso/IDPSloRedirect/metaAlias/publicidp"
-                },
-                "singleSignOnService": {
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-                    "url": "https://idp.ssocircle.com:443/sso/SSORedirect/metaAlias/publicidp"
-                },
-                "x509cert": "MIIEYzCCAkugAwIBAgIDIAZmMA0GCSqGSIb3DQEBCwUAMC4xCzAJBgNVBAYTAkRFMRIwEAYDVQQKDAlTU09DaXJjbGUxCzAJBgNVBAMMAkNBMB4XDTE2MDgwMzE1MDMyM1oXDTI2MDMwNDE1MDMyM1owPTELMAkGA1UEBhMCREUxEjAQBgNVBAoTCVNTT0NpcmNsZTEaMBgGA1UEAxMRaWRwLnNzb2NpcmNsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCAwWJyOYhYmWZF2TJvm1VyZccs3ZJ0TsNcoazr2pTWcY8WTRbIV9d06zYjngvWibyiylewGXcYONB106ZNUdNgrmFd5194Wsyx6bPvnjZEERny9LOfuwQaqDYeKhI6c+veXApnOfsY26u9Lqb9sga9JnCkUGRaoVrAVM3yfghv/Cg/QEg+I6SVES75tKdcLDTt/FwmAYDEBV8l52bcMDNF+JWtAuetI9/dWCBe9VTCasAr2Fxw1ZYTAiqGI9sW4kWS2ApedbqsgH3qqMlPA7tg9iKy8Yw/deEn0qQIx8GlVnQFpDgzG9k+jwBoebAYfGvMcO/BDXD2pbWTN+DvbURlAgMBAAGjezB5MAkGA1UdEwQCMAAwLAYJYIZIAYb4QgENBB8WHU9wZW5TU0wgR2VuZXJhdGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBQhAmCewE7aonAvyJfjImCRZDtccTAfBgNVHSMEGDAWgBTA1nEA+0za6ppLItkOX5yEp8cQaTANBgkqhkiG9w0BAQsFAAOCAgEAAhC5/WsF9ztJHgo+x9KV9bqVS0MmsgpG26yOAqFYwOSPmUuYmJmHgmKGjKrj1fdCINtzcBHFFBC1maGJ33lMk2bM2THx22/O93f4RFnFab7t23jRFcF0amQUOsDvltfJw7XCal8JdgPUg6TNC4Fy9XYv0OAHc3oDp3vl1Yj8/1qBg6Rc39kehmD5v8SKYmpE7yFKxDF1ol9DKDG/LvClSvnuVP0b4BWdBAA9aJSFtdNGgEvpEUqGkJ1osLVqCMvSYsUtHmapaX3hiM9RbX38jsSgsl44Rar5Ioc7KXOOZFGfEKyyUqucYpjWCOXJELAVAzp7XTvA2q55u31hO0w8Yx4uEQKlmxDuZmxpMz4EWARyjHSAuDKEW1RJvUr6+5uA9qeOKxLiKN1jo6eWAcl6Wr9MreXR9kFpS6kHllfdVSrJES4ST0uh1Jp4EYgmiyMmFCbUpKXifpsNWCLDenE3hllF0+q3wIdu+4P82RIM71n7qVgnDnK29wnLhHDat9rkC62CIbonpkVYmnReX0jze+7twRanJOMCJ+lFg16BDvBcG8u0n/wIDkHHitBI7bU1k6c6DydLQ+69h8SCo6sO9YuD+/3xAGKad4ImZ6vTwlB4zDCpu6YgQWocWRXE+VkOb+RBfvP755PUaLfL63AFVlpOnEpIio5++UjNJRuPuAA=",
-            }
-        }
 
 ####
 # Views
