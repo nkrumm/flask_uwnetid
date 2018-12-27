@@ -75,8 +75,7 @@ class UWAuthManager(object):
     def _login_callback(self, acs):
         if acs["logged_in"]:
             attributes = dict(acs["attributes"])
-            #u = User(id=attributes["urn:oid:0.9.2342.19200300.100.1.1"][0])
-            u = User(id=attributes["UserID"][0])
+            u = User(id=attributes["urn:oid:0.9.2342.19200300.100.1.1"][0])
             login_user(u)
             return redirect(acs["relay_state"])
         else:
