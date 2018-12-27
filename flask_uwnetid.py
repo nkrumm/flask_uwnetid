@@ -36,11 +36,11 @@ class UWAuthManager(object):
         # set up the certificate
         if not x509cert or not private_key:
             raise Exception("A X509 certificate and private key is required.")
-            if "PRIVATE" in x509cert:
-                raise Exception("Certificate should NOT be the private key.")
-            else:
-                self.x509cert = x509cert
-                self.private_key = private_key
+        elif "PRIVATE" in x509cert:
+            raise Exception("Certificate should NOT be the private key.")
+        else:
+            self.x509cert = x509cert
+            self.private_key = private_key
 
         # Set a default login callback, can be overriden
         self.login_callback = self._login_callback
