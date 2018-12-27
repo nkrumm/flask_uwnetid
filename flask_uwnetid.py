@@ -108,6 +108,7 @@ class UWAuthManager(object):
                 }
         }
         return {
+            "strict": True,
             "sp": sp_settings,
             "idp": idp_settings
         }
