@@ -22,8 +22,14 @@ UW_METADATA_ENDPOINT = 'https://idp.u.washington.edu/metadata/idp-metadata.xml'
 
 class UWAuthManager(object):
 
-    def __init__(self, app=None, domain=None, metadata_url=None, 
-                 x509cert=None, private_key=None, settings=None, secret_key=None):
+    def __init__(self, app=None, domain=None, metadata_url=None,
+                 x509cert=None, private_key=None, settings=None, secret_key=None,
+                 strict=True, debug=False):
+        # SECURITY NOTE: `strict` should be set to True for production use!
+        # Note that debug can be used in conjuction with strict=True.
+        self.strict = strict
+        self.debug = debug
+
         # Set the domain name, used in the SP's settings and passed to the IDP
         # The domain name should match the Entitiy ID stored with the IDP.
         if not domain:
@@ -108,7 +114,8 @@ class UWAuthManager(object):
                 }
         }
         return {
-            "strict": True,
+            "strict": self.strict,
+            "debug": self.debug,
             "sp": sp_settings,
             "idp": idp_settings
         }
