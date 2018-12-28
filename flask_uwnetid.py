@@ -185,14 +185,17 @@ class SamlRequest(object):
             logged_in=self.logged_in
         )
 
-    def prepare_flask_request(self, request_data):
-        url_data = urlparse(request_data.url)
+    def prepare_flask_request(self, request):
+        # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
+        url_data = urlparse(request.url)
         return {
-            'http_host': request_data.host,
+            'https': 'on',#  TODO: use HTTP_X_FORWARDED here? 
+            'http_host': request.host,
             'server_port': url_data.port,
-            'script_name': request_data.path,
-            'get_data': request_data.args.copy(),
-            'post_data': request_data.form.copy()
+            'script_name': request.path,
+            'get_data': request.args.copy(),
+            'post_data': request.form.copy(),
+            'query_string': request.query_string
         }
 
     def sso(self):
