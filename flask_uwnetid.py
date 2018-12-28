@@ -1,3 +1,6 @@
+import logging
+import sys
+
 from flask import redirect, abort, request, current_app, make_response, session
 from flask_login import (
     LoginManager, login_user, login_required,
@@ -9,7 +12,13 @@ from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from urllib.parse import urlparse
 
-import json
+
+logging.basicConfig(
+    stream=sys.stderr,
+    format='%(asctime)s %(levelname)s %(module)s %(lineno)s %(message)s',
+    level=logging.INFO)
+
+log = logging.getLogger(__name__)
 
 class SecurityException(Exception):
     pass
@@ -50,23 +59,22 @@ class UWAuthManager(object):
 
         # Set a default login callback, can be overriden
         self.login_callback = self._login_callback
-        
+
         # Get IDP settings, either dictionary, file or via Metadata endpoint.
         if isinstance(settings, dict):
-            self.settings = OneLogin_Saml2_Settings(settings=self._settings_from_dict(settings))    
+            self.settings = OneLogin_Saml2_Settings(settings=self._settings_from_dict(settings))
         elif isinstance(settings, str):
             self.settings = OneLogin_Saml2_Settings(settings=self._settings_from_file(settings))
         else:
             metadata_url = metadata_url or UW_METADATA_ENDPOINT
             self.settings = OneLogin_Saml2_Settings(settings=self._settings_from_url(metadata_url))
-        
+
         # A secret key must be set or given for flask-user sessions
         if "SECRET_KEY" not in app.config:
             if not secret_key:
                 raise SecurityException("You must either configure app.config['SECRET_KEY'] or pass secret_key to UWAuthManager")
             else:
                 app.config["SECRET_KEY"] = secret_key
-        
         # Store the setting in the app config and init the manager
         if app:
             app.config["SAML_SETTINGS"] = self.settings
@@ -219,6 +227,8 @@ class SamlRequest(object):
             session['samlUserdata'] = self.auth.get_attributes()
             session['samlNameId'] = self.auth.get_nameid()
             session['samlSessionIndex'] = self.auth.get_session_index()
+        else:
+            log.error(self.errors)
         if 'samlUserdata' in session:
             self.logged_in = True
             if len(session['samlUserdata']) > 0:
@@ -237,6 +247,9 @@ class SamlRequest(object):
                 return url
             else:
                 self.success_slo = True
+        else:
+            log.error(self.errors)
+
         return self.serialize()
 
     def generate_metadata(self):
@@ -247,5 +260,7 @@ class SamlRequest(object):
             resp = make_response(metadata, 200)
             resp.headers['Content-Type'] = 'text/xml'
         else:
+            log.error(errors)
+
             resp = make_response(errors.join(', '), 500)
         return resp
