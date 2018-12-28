@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from flask import redirect, abort, request, current_app, make_response, session
+from flask import redirect, abort, request, current_app, make_response, session, url_for
 from flask_login import (
     LoginManager, login_user, login_required,
     current_user, UserMixin
@@ -93,9 +93,13 @@ class UWAuthManager(object):
         login_manager = LoginManager()
         login_manager.init_app(app)
         login_manager.user_loader(self.load_user)
+        login_manager.unauthorized_handler(self.handle_login_redirect)
 
     def load_user(self, userid):
         return User(userid)
+
+    def handle_login_redirect(self):
+        return redirect(url_for('login', redirect=request.path))
 
     def _login_callback(self, acs):
         if acs["logged_in"]:
