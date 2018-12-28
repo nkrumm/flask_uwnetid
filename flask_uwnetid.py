@@ -82,10 +82,11 @@ class UWAuthManager(object):
 
     def init_login_manager(self, app):
         # Setup the flask-user loginmanager to manage server side session
-        app.login_manager = LoginManager(app)
-        app.login_manager.user_loader = self.load_user
+        login_manager = LoginManager()
+        login_manager.init_app(app)
+        login_manager.user_loader(self.load_user)
 
-    def load_user(userid):
+    def load_user(self, userid):
         return User(userid)
 
     def _login_callback(self, acs):
