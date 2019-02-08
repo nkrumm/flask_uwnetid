@@ -1,18 +1,5 @@
-import logging
 import sys
-
-from flask import redirect, abort, request, current_app, make_response, session, url_for
-from flask_login import (
-    LoginManager, login_user, login_required,
-    current_user, UserMixin
-)
-from flask.views import View
-from onelogin.saml2.auth import OneLogin_Saml2_Auth
-from onelogin.saml2.settings import OneLogin_Saml2_Settings
-from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
-from urllib.parse import urlparse
-
-
+import logging
 logging.basicConfig(
     stream=sys.stderr,
     format='%(asctime)s %(levelname)s %(module)s %(lineno)s %(message)s',
@@ -20,12 +7,42 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
+from urllib.parse import urlparse
+
+from flask import (
+    redirect, abort, request, current_app,
+    make_response, session, url_for)
+
+from flask.views import View
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.settings import OneLogin_Saml2_Settings
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+
+
+try:
+    # This is wrapped in a try-block as flask_login may not be needed.
+    from flask_login import (
+        LoginManager, login_user, login_required, UserMixin
+    )
+
+    class User(UserMixin):
+        id_urn = "urn:oid:0.9.2342.19200300.100.1.1"
+        groups_urn = "urn:oid:1.3.6.1.4.1.5923.1.5.1.1"
+        def __init__(self, attributes):
+            self.id = attributes[self.id_urn][0]
+            if self.groups_urn in attributes:
+                self.groups = {g.split(":")[-1] for g in attributes[self.groups_urn]}
+            else:
+                self.groups = set()
+
+except:
+    log.warn("Could not load flask_login or create User object. This may not be necessary "
+             "if a `login_callback` is provided to UWAuthManager.")
+
+
 class SecurityException(Exception):
     pass
 
-class User(UserMixin):
-    def __init__(self, id):
-        self.id = id
 
 UW_METADATA_ENDPOINT = 'https://idp.u.washington.edu/metadata/idp-metadata.xml'
 
@@ -33,11 +50,13 @@ class UWAuthManager(object):
 
     def __init__(self, app=None, domain=None, metadata_url=None,
                  x509cert=None, private_key=None, settings=None, secret_key=None,
-                 strict=True, debug=False):
+                 strict=True, debug=False, login_callback=None, use_flask_login=True,
+                 enable_two_factor=False):
         # SECURITY NOTE: `strict` should be set to True for production use!
         # Note that debug can be used in conjuction with strict=True.
         self.strict = strict
         self.debug = debug
+        self.enable_two_factor = enable_two_factor
 
         # Set the domain name, used in the SP's settings and passed to the IDP
         # The domain name should match the Entitiy ID stored with the IDP.
@@ -58,7 +77,7 @@ class UWAuthManager(object):
             self.private_key = private_key
 
         # Set a default login callback, can be overriden
-        self.login_callback = self._login_callback
+        self.login_callback = login_callback or self._login_callback
 
         # Get IDP settings, either dictionary, file or via Metadata endpoint.
         if isinstance(settings, dict):
@@ -78,7 +97,8 @@ class UWAuthManager(object):
         # Store the setting in the app config and init the manager
         if app:
             app.config["SAML_SETTINGS"] = self.settings
-            self.init_login_manager(app)
+            if use_flask_login:
+                self.init_login_manager(app)
             self.init_app(app)
 
     def init_app(self, app):
@@ -104,7 +124,7 @@ class UWAuthManager(object):
     def _login_callback(self, acs):
         if acs["logged_in"]:
             attributes = dict(acs["attributes"])
-            u = User(id=attributes["urn:oid:0.9.2342.19200300.100.1.1"][0])
+            u = User(attributes)
             login_user(u)
             return redirect(acs["relay_state"])
         else:
@@ -126,11 +146,16 @@ class UWAuthManager(object):
                     "url": "%s/saml/sls" % self.domain
                 }
         }
+        security_settings = {
+            # requestedAuthnContext needs to be OFF when 2FA is enabled. 
+            "requestedAuthnContext": not self.enable_two_factor
+        }
         return {
             "strict": self.strict,
             "debug": self.debug,
             "sp": sp_settings,
-            "idp": idp_settings
+            "idp": idp_settings,
+            "security": security_settings,
         }
 
     def _settings_from_file(self, filename):
@@ -138,6 +163,17 @@ class UWAuthManager(object):
 
     def _settings_from_dict(self, dictionary):
         raise NotImplementedError
+
+    def protect_all_views(self, app):
+        """Require login for all views other than saml endpoints.
+
+        """
+        saml_endpoints = {'metadata', 'login', 'logout', 'acs'}
+        for view_func in app.server.view_functions:
+            if view_func not in saml_endpoints:
+                app.server.view_functions[view_func] = \
+                    login_required(app.server.view_functions[view_func])
+        return app
 
 
 ####
@@ -201,7 +237,7 @@ class SamlRequest(object):
         # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
         url_data = urlparse(request.url)
         return {
-            'https': 'on',#  TODO: use HTTP_X_FORWARDED here? 
+            'https': 'on',#  TODO: use HTTP_X_FORWARDED here?
             'http_host': request.host,
             'server_port': url_data.port,
             'script_name': request.path,
@@ -221,7 +257,8 @@ class SamlRequest(object):
             name_id = session['samlNameId']
         if 'samlSessionIndex' in session:
             session_index = session['samlSessionIndex']
-        return self.auth.logout(name_id=name_id, session_index=session_index)
+        return_to = self.request["get_data"].get("redirect")
+        return self.auth.logout(name_id=name_id, session_index=session_index, return_to=return_to)
 
     def acs(self):
         self.auth.process_response()
