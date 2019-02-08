@@ -1,5 +1,8 @@
 # flask_uwnetid: UW NetID SAML authentication
 
+**NOTE**: This library is 
+[*mirrored* to github here](https://github.com/nkrumm/flask_uwnetid). If you need to `pip install` this package outside of the UW VPN, you can use that repository.
+
 This package provides one-line integration of the UWNetID SAML Identity Provider (i.e., "Shibboleth"). 
 
 **Please note:** This package is intended for use with the UWNetID service only; use with other IdPs is not supported.
